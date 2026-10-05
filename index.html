@@ -601,6 +601,8 @@ input[type="text"]{
 
 let invitacion = null;
 
+const API_URL = "https://script.google.com/macros/s/AKfycbyObT82Iieli8_TWcL_yJU8jJ_8PbrDL5B9RVtPWjUBp6cGAg1q3yPk3lfXdeELsbb-/exec";
+
 const RESTRICCIONES = ["Vegetariano", "Vegano", "Celíaco", "Sin lactosa"];
 
 // ===== Datos editables =====
@@ -758,18 +760,18 @@ function buscarIdentidad(){
   btn.textContent = "Buscando...";
   msg.innerHTML = "";
 
-  google.script.run
-    .withSuccessHandler(function(data){
+  fetch(API_URL + "?action=buscar&nombre=" + encodeURIComponent(nombre))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
       btn.disabled = false;
       btn.textContent = "Ver mi invitación";
       procesarResultado(data);
     })
-    .withFailureHandler(function(err){
+    .catch(function(err){
       btn.disabled = false;
       btn.textContent = "Ver mi invitación";
       msg.textContent = "Ocurrió un error. Probá de nuevo.";
-    })
-    .buscarInvitado(nombre);
+    });
 
 }
 
@@ -808,16 +810,16 @@ function procesarResultado(data){
 
 function elegirOpcion(idElegido){
   document.getElementById("btnGate").disabled = true;
-  google.script.run
-    .withSuccessHandler(function(data){
+  fetch(API_URL + "?action=invitacion&id=" + encodeURIComponent(idElegido))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
       document.getElementById("btnGate").disabled = false;
       abrirApp(data);
     })
-    .withFailureHandler(function(err){
+    .catch(function(err){
       document.getElementById("btnGate").disabled = false;
       document.getElementById("gateMsg").textContent = "Ocurrió un error. Probá de nuevo.";
-    })
-    .getInvitation(idElegido);
+    });
 }
 
 function abrirApp(data){
@@ -1032,21 +1034,26 @@ function enviar(){
     };
   });
 
-  google.script.run
-    .withSuccessHandler(function(){
+  fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      action: "guardar",
+      id: invitacion.id,
+      personas: personas,
+      observaciones: document.getElementById("obs").value
+    })
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(result){
       btn.disabled = false;
       btn.textContent = "Confirmar asistencia";
       mostrarConfirmacion(true);
     })
-    .withFailureHandler(function(err){
+    .catch(function(err){
       btn.disabled = false;
       btn.textContent = "Confirmar asistencia";
-      alert("No pudimos guardar la respuesta. Probá de nuevo. (" + err.message + ")");
-    })
-    .saveRSVP({
-      id: invitacion.id,
-      personas: personas,
-      observaciones: document.getElementById("obs").value
+      alert("No pudimos guardar la respuesta. Probá de nuevo.");
     });
 
 }
