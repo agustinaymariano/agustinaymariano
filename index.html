@@ -296,7 +296,9 @@ h1,h2,h3{
   margin-top:6px;
 }
 
-/* ===== Paneles (RSVP y regalo) ===== */
+/* ===== Paneles (RSVP y regalo) =====
+   display:none por defecto: así NUNCA reservan espacio en la página,
+   sin importar si el navegador respeta position:fixed o no. */
 .sheet{
   position:fixed;
   left:0;
@@ -307,15 +309,17 @@ h1,h2,h3{
   background:var(--paper);
   overflow-y:auto;
   -webkit-overflow-scrolling:touch;
-  visibility:hidden;
+  display:none;
   transform:translateY(100%);
-  transition:transform .35s ease, visibility 0s linear .35s;
+  transition:transform .3s ease;
 }
 
 .sheet.open{
-  visibility:visible;
+  display:block;
+}
+
+.sheet.show{
   transform:none;
-  transition:transform .35s ease;
 }
 
 #sheetRegalo{z-index:60}
@@ -546,6 +550,7 @@ input[type="text"]{
     <h3>¿Hay estacionamiento?</h3>
     <p class="texto">Águila Pabellón no cuenta con estacionamiento propio. De todas formas, está el estacionamiento de La Rural en frente.</p>
   </div>
+</section>
 
 <!-- ANTES DE IRTE -->
 <section class="block tight-top">
@@ -627,11 +632,10 @@ const CONFIG = {
     direccion: "Sarmiento 2725",
     hora: "18",
     nota: "",
-    // COMPLETAR (opcional): reemplazar por el link exacto de Google Maps
     maps: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent("Águila Pabellón, Sarmiento 2725, Buenos Aires")
   },
-    regalo: {
-        frase: "Si querés hacernos un regalo y no sabés qué, podes hacernos una transferencia a:",
+  regalo: {
+    frase: "Si querés hacernos un regalo y no sabés qué, podes hacernos una transferencia a:",
     aliasPesos: "AgusyMarian.pesos",
     aliasDolares: "AgusyMarian.dolar",
     titular: "Titular de la cuenta: Elmiger Mariano Andrés"
@@ -642,11 +646,6 @@ const ALIAS_LISTA = [
   { label: "Alias en pesos", key: "aliasPesos" },
   { label: "Alias en dólares", key: "aliasDolares" }
 ];
-
-const ICONOS = {
-  civil: '<svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="18" r="7"/><circle cx="20" cy="18" r="7"/></svg>',
-  fiesta: '<svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M10 5h12c0 6-2 10-6 10s-6-4-6-10z"/><path d="M16 15v11M11 27h10"/></svg>'
-};
 
 // ===== Utilidades =====
 function esc(s){
@@ -660,13 +659,23 @@ function abrirSheet(idSheet){
   s.classList.add("open");
   s.scrollTop = 0;
   document.body.classList.add("noscroll");
+  // Fuerza un reflow antes de animar, para que la transición se vea
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      s.classList.add("show");
+    });
+  });
 }
 
 function cerrarSheet(idSheet){
-  document.getElementById(idSheet).classList.remove("open");
-  if (!document.querySelector(".sheet.open")) {
-    document.body.classList.remove("noscroll");
-  }
+  const s = document.getElementById(idSheet);
+  s.classList.remove("show");
+  setTimeout(function(){
+    s.classList.remove("open");
+    if (!document.querySelector(".sheet.open")) {
+      document.body.classList.remove("noscroll");
+    }
+  }, 300);
 }
 
 // ===== Contenido estático =====
@@ -696,35 +705,6 @@ function renderEstatico(){
   const t = document.getElementById("regaloTitular");
   if (CONFIG.regalo.titular) t.textContent = CONFIG.regalo.titular;
   else t.style.display = "none";
-
-}
-
-function copiarAlias(i, btn){
-
-  const texto = CONFIG.regalo[ALIAS_LISTA[i].key];
-  const original = btn.textContent;
-
-  const ok = function(){
-    btn.textContent = "¡Copiado!";
-    setTimeout(function(){ btn.textContent = original; }, 2000);
-  };
-
-  const fallback = function(){
-    const ta = document.createElement("textarea");
-    ta.value = texto;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand("copy"); ok(); } catch (e) {}
-    document.body.removeChild(ta);
-  };
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(texto).then(ok).catch(fallback);
-  } else {
-    fallback();
-  }
 
 }
 
